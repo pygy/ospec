@@ -34,14 +34,14 @@ function stringify(arg) {
 const moduleKinds = supportsESM
 	? ["cjs", "esm"]
 	: (console.log("Skipping ESM tests due to lack of platform support"), ["cjs"])
-const commands = ["node", "npm", "yarn"].filter((launcher) => {
+
+const commands = ["npm"]; void ["node", "npm", "yarn"].filter((launcher) => {
 	try {
-		chp.execFileSync(launcher, ["-v"])
-		// Avoid running with bare Node for now from Windows
-		// TODO: better abstract command running to
-		// handle this scenario
+		chp.execSync(`${launcher} -v`)
+		// TODO: figure out how to run bare Node.js in Windows
 		return !isWindows || launcher !== "node"
 	} catch(e) {
+		console.error(e)
 		return false
 	}
 })
@@ -52,7 +52,7 @@ if (commands.length === 0) throw new Error("couldn't find either node, npm nor y
 function execFile(command, args, options) {
 	if (typeof options.cwd !== "string") throw new Error(`\`options.cwd\`: string expected for ${command} ${stringify(args)} ${stringify(options)}`)
 	return new Promise((fulfill, reject) => {
-		chp.execFile(command, args, {
+		chp.exec([command, ...args].join(" "), {
 			shell: true,
 			...options,
 			timeout: 5000,
@@ -580,7 +580,7 @@ o.spec("cli", function() {
 				o({correctBinaryPath: stdout.includes(join(cwd, "node_modules/.bin/ospec"))}).deepEquals({correctBinaryPath: true})(stdout)
 			})
 		})
-		o("default", function() {
+		o.only("default", function() {
 			o.timeout(10000)
 			return execFile(command, args("default"), {cwd}).then(({code, stdout, stderr}) => {
 				stderr = removeWarnings(stderr)
@@ -687,62 +687,65 @@ o.spec("cli", function() {
 				o({correctBinaryPath: stdout.includes(join(cwd, "node_modules/.bin/ospec"))}).deepEquals({correctBinaryPath: true})(stdout)
 			})
 		})
-		o("metadata", function() {
+		o.only("metadata", function() {
 			o.timeout(10000)
 			return execFile(command, args("metadata"), {cwd}).then(({code, stdout, stderr}) => {
-				stderr = removeWarnings(stderr)
-				if (command === "yarn") stdout = removeYarnExtraOutput(stdout)
+				console.log(
+					"STDOUT: \n- - - - -\n\n" + stdout + "\n- = = - = - = \n"
+				)
+				// stderr = removeWarnings(stderr)
+				// if (command === "yarn") stdout = removeYarnExtraOutput(stdout)
 
-				o({code}).deepEquals({code: 0})
-				o({stderr}).deepEquals({stderr: ""})
+				// o({code}).deepEquals({code: 0})
+				// o({stderr}).deepEquals({stderr: ""})
 
-				o({correctNumberPassed: /All 3 assertions passed/.test(stdout)})
-					.deepEquals({correctNumberPassed: true})(stdout.match(/\n[^\n]+\n[^\n]+\n$/))
-				const files = [
-					"default1.js", "default2.js", "override.js"
-				]
-				files.forEach((file) => {
-					const fullPath = join(cwd, file)
-					const metadataFile = file === "override.js" ? "foo" : fullPath
+				// o({correctNumberPassed: /All 3 assertions passed/.test(stdout)})
+				// 	.deepEquals({correctNumberPassed: true})(stdout.match(/\n[^\n]+\n[^\n]+\n$/))
+				// const files = [
+				// 	"default1.js", "default2.js", "override.js"
+				// ]
+				// files.forEach((file) => {
+				// 	const fullPath = join(cwd, file)
+				// 	const metadataFile = file === "override.js" ? "foo" : fullPath
 
-					check({
-						haystack: stdout,
-						needle: fullPath + " ran",
-						label: "ran",
-						expected: true
-					})
+				// 	check({
+				// 		haystack: stdout,
+				// 		needle: fullPath + " ran",
+				// 		label: "ran",
+				// 		expected: true
+				// 	})
 
-					check({
-						haystack: stdout,
-						// __filename is also the name of the spec
-						needle: fullPath + " > test metadata name from test",
-						label: "metadata name from test",
-						expected: true
-					})
+				// 	check({
+				// 		haystack: stdout,
+				// 		// __filename is also the name of the spec
+				// 		needle: fullPath + " > test metadata name from test",
+				// 		label: "metadata name from test",
+				// 		expected: true
+				// 	})
 
-					check({
-						haystack: stdout,
-						needle: metadataFile + " metadata file from test",
-						label: "metadata file from test",
-						expected: true
-					})
+				// 	check({
+				// 		haystack: stdout,
+				// 		needle: metadataFile + " metadata file from test",
+				// 		label: "metadata file from test",
+				// 		expected: true
+				// 	})
 
-					check({
-						haystack: stdout,
-						needle: fullPath + " > test metadata name from assertion",
-						label: "metadata name from assertion",
-						expected: true
-					})
+				// 	check({
+				// 		haystack: stdout,
+				// 		needle: fullPath + " > test metadata name from assertion",
+				// 		label: "metadata name from assertion",
+				// 		expected: true
+				// 	})
 
-					check({
-						haystack: stdout,
-						needle: metadataFile + " metadata file from assertion",
-						label: "metadata file from assertion",
-						expected: true
-					})
+				// 	check({
+				// 		haystack: stdout,
+				// 		needle: metadataFile + " metadata file from assertion",
+				// 		label: "metadata file from assertion",
+				// 		expected: true
+				// 	})
 
 
-				})
+				// })
 			})
 		})
 	})

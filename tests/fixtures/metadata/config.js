@@ -17,7 +17,10 @@ const o = require("ospec")
 
 const esmHeader = `
 "use strict"
-console.log(import.meta.url.slice(7) + " ran")
+console.log("full path:", import.meta.url)
+const isWindows = process.platform === "win32"
+const offset = isWindows ? 8 : 7
+console.log(import.meta.url.slice(offset) + " ran")
 
 import {default as o} from 'ospec'
 `
